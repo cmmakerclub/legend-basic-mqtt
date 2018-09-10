@@ -11,6 +11,7 @@ CMMC_ConfigManager::~CMMC_ConfigManager() {
 }
 
 void CMMC_ConfigManager::_load_raw_content() {
+  Serial.println("load raw content");
   this->configFile = SPIFFS.open(this->filename_c, "r");
   size_t size = configFile.size() + 1;
   std::unique_ptr<char[]> buf(new char[size + 1]);
@@ -22,53 +23,52 @@ void CMMC_ConfigManager::_load_raw_content() {
 
   this->fileContent = new char[size + 1];
   strcpy(this->fileContent, buf.get());
-
+  Serial.println("close..");
   this->configFile.close();
 }
 
 void CMMC_ConfigManager::init(const char* filename) {
   if (filename != NULL) {
     strcpy(this->filename_c, filename); 
-    // Serial.println("ConfigManager init with new filename");
+    Serial.println("ConfigManager init with new filename");
   }
   else {
-    // Serial.println("ConfigManager init()"); 
+    Serial.println("ConfigManager init()"); 
   }
 
   Serial.printf("current file = %s\r\n", this->filename_c);
   if (SPIFFS.exists(this->filename_c)) {
-    // _load_raw_content();
+    _load_raw_content();
   }
   else {
-    // USER_DEBUG_PRINTF("creating.. %s \r\n", this->filename_c);
+    Serial.printf("creating.. %s \r\n", this->filename_c);
     _init_json_file();
+    Serial.println("..> 46");
     _load_raw_content();
   }
 }
 
 void CMMC_ConfigManager::commit() {
-  static CMMC_ConfigManager *that;
-  that = this;
-  // USER_DEBUG_PRINTF("Commit FS..... from [%x]\r\n", that); 
+  // Serial.printf("Commit FS..... from [%x]\r\n", that); 
   Serial.printf("> [BEFORE INNER CLOSURE] writing file %s\r\n", filename_c);
-  load_config([](JsonObject * root, const char* content) {
+  load_config([&](JsonObject * root, const char* content) {
     Serial.println("------------");
     Serial.printf("before commit DO: print config... from [%x]\r\n", root);
     Serial.println(content);
     Serial.println("------------");
     if (root != NULL) {
-      Serial.printf("writing file %s\r\n", that->filename_c);
-      that->configFile = SPIFFS.open(that->filename_c, "w");
-      for (Items::iterator it = that->items.begin(); it != that->items.end(); ++it) {
+      Serial.printf("writing file %s\r\n", this->filename_c);
+      this->configFile = SPIFFS.open(this->filename_c, "w");
+      for (Items::iterator it = this->items.begin(); it != this->items.end(); ++it) {
         String first  = it->first;
         String second = it->second;
         root->set(first, second);
         Serial.printf("[std::map]: %s->%s\r\n", first.c_str(), second.c_str());
       }
-      size_t configSize = root->printTo(that->configFile);
+      size_t configSize = root->printTo(this->configFile);
       root->printTo(Serial);
-      Serial.printf(" has be written %d bytes to file.\r\n", that->configFile.size());
-      that->configFile.close();
+      Serial.printf(" has be written %d bytes to file.\r\n", this->configFile.size());
+      this->configFile.close();
     }
     else {
       Serial.printf("loading config FAILED!!\r\n");
@@ -109,12 +109,16 @@ void CMMC_ConfigManager::load_config(cmmc_json_loaded_cb_t cb) {
 }
 
 File CMMC_ConfigManager::_init_json_file() {
-  // USER_DEBUG_PRINTF("[_init_json_file]\r\n");
+  Serial.println("_init_json_file");
   this->configFile = SPIFFS.open(this->filename_c, "w");
+  Serial.println(this->configFile);
   jsonBuffer.clear();
   JsonObject& json = this->jsonBuffer.createObject();
   json.printTo(configFile);
+  Serial.println("done");
   this->configFile.close();
+  Serial.println(this->configFile);
+  return this->configFile;
 }
 
 void CMMC_ConfigManager::add_debug_listener(cmmc_debug_cb_t cb) {

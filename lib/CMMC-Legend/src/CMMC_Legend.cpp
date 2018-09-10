@@ -38,7 +38,7 @@ void CMMC_Legend::init_gpio() {
 }
 
 void CMMC_Legend::init_fs() {
-  // Serial.println("OS::Init FS..");
+  Serial.println("OS::Init FS..");
   SPIFFS.begin();
   Dir dir = SPIFFS.openDir("/");
   isLongPressed();

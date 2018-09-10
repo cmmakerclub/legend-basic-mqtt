@@ -24,9 +24,9 @@ void setup()
   mqttModule = new MqttModule(); 
   configButtonModule = new ConfigButtonModule();
 
+  os->addModule(configButtonModule); 
   os->addModule(wifiModule); 
   os->addModule(mqttModule); 
-  os->addModule(configButtonModule); 
 
   os->setup();
   Serial.printf("APP VERSION: %s\r\n", LEGEND_APP_VERSION); 

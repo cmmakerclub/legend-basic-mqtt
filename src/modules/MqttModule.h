@@ -35,6 +35,7 @@ private:
   int MQTT_CONNECT_TIMEOUT = 10;
   bool MQTT_LWT; 
   unsigned long previousMillis = 0;
+  bool mqttOk = false;
 };
 
 #endif

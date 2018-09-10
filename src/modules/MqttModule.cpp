@@ -8,8 +8,11 @@ void MqttModule::config(CMMC_System *os, AsyncWebServer *server)
 {
   strcpy(this->path, "/api/mqtt");
   this->_serverPtr = server;
+  Serial.println("call config");
   this->_managerPtr = new CMMC_ConfigManager(MQTT_CONFIG_FILE);
+  Serial.println("b4 init");
   this->_managerPtr->init();
+  Serial.println("after init");
   this->_managerPtr->load_config([&](JsonObject * root, const char *content) {
     if (root == NULL)
     {
@@ -17,8 +20,9 @@ void MqttModule::config(CMMC_System *os, AsyncWebServer *server)
       Serial.println(content);
       return;
     }
-    Serial.println(content);
     Serial.println("[user] mqtt config json loaded..");
+    mqttOk = true;
+    Serial.println(content);
     char mqtt_host[40] = "";
     char mqtt_user[40] = "";
     char mqtt_pass[40] = "";
@@ -78,9 +82,8 @@ void MqttModule::config(CMMC_System *os, AsyncWebServer *server)
 
 void MqttModule::configWebServer()
 {
-  static MqttModule *that = this;
   _serverPtr->on(this->path, HTTP_POST, [&](AsyncWebServerRequest * request) {
-    String output = that->saveConfig(request, this->_managerPtr);
+    String output = this->saveConfig(request, this->_managerPtr);
     request->send(200, "application/json", output);
   });
 }
@@ -99,22 +102,25 @@ void MqttModule::setup()
   digitalWrite(15, HIGH); 
   pinMode(S1, INPUT_PULLUP);
 
-  init_mqtt(); 
-  static MqttModule *that;
-  that = this;
-  mqttMessageTicker.attach_ms(1000, []() {
-    that->mqttMessageTimeout++;
-    if ( (that->mqttMessageTimeout) > (unsigned int)that->PUBLISH_EVERY/1000 * 2.5) {
-      digitalWrite(0, HIGH);
-      ESP.restart();
-    }
-  });
+  if (mqttOk) {
+    init_mqtt(); 
+    static MqttModule *that;
+    that = this;
+    mqttMessageTicker.attach_ms(1000, []() {
+      that->mqttMessageTimeout++;
+      if ( (that->mqttMessageTimeout) > (unsigned int)that->PUBLISH_EVERY/1000 * 2.5) {
+        digitalWrite(0, HIGH);
+        ESP.restart();
+      }
+    }); 
+  }
 };
 
 bool state = 1; 
 void MqttModule::loop()
 {
-  mqtt->loop();
+  if (mqttOk)
+    mqtt->loop();
   if (digitalRead(S1) == LOW) {
     state = !state;
     delay(200);
@@ -130,7 +136,8 @@ void MqttModule::loop()
       mqtt->sync_advpub("", "CMMC/PLUG-001/$/command", "OFF", false); 
     }
     unsigned long nextTick = millis() + 1000L;
-    while( millis() < nextTick ) {
+    while( millis() < nextTick ) { 
+     if (mqttOk)
       mqtt->loop(); 
     }
   }
