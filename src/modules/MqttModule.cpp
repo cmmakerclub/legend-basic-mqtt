@@ -88,12 +88,17 @@ void MqttModule::configWebServer()
 void MqttModule::configLoop() {
 }
 
+int S1 = 13;
 void MqttModule::setup()
 {
   Serial.println("MqttModule::setup"); 
-  // pinMode(15, OUTPUT);
-  // pinMode(2, OUTPUT);
-  
+  pinMode(15, OUTPUT);
+  pinMode(2, OUTPUT); 
+
+  digitalWrite(2, LOW);
+  digitalWrite(15, HIGH); 
+  pinMode(S1, INPUT_PULLUP);
+
   init_mqtt(); 
   static MqttModule *that;
   that = this;
@@ -106,9 +111,25 @@ void MqttModule::setup()
   });
 };
 
+bool state = 1; 
 void MqttModule::loop()
 {
   mqtt->loop();
+  if (digitalRead(S1) == LOW) {
+    state = !state;
+    delay(200);
+    Serial.println(state);
+    if (state) {
+      digitalWrite(2, LOW);
+      digitalWrite(15, HIGH);
+      mqtt->sync_advpub("", "CMMC/PLUG-001/$/command", "ON", false); 
+    }
+    else {
+      digitalWrite(2, HIGH);
+      digitalWrite(15, LOW);
+      mqtt->sync_advpub("", "CMMC/PLUG-001/$/command", "OFF", false); 
+    }
+  }
 };
 
 // MQTT INITIALIZER
@@ -189,22 +210,23 @@ void MqttModule::register_receive_hooks(MqttConnector *mqtt)
   mqtt->on_before_message_arrived_once([&](void) {}); 
   mqtt->on_message([&](const MQTT::Publish & pub) {}); 
   mqtt->on_after_message_arrived([&](String topic, String cmd, String payload) {
-    // Serial.printf("recv topic: %s\r\n", topic.c_str());
-    // Serial.printf("recv cmd: %s\r\n", cmd.c_str());
-    // Serial.printf("payload: %s\r\n", payload.c_str());
+    Serial.printf("recv topic: %s\r\n", topic.c_str());
+    Serial.printf("recv cmd: %s\r\n", cmd.c_str());
+    Serial.printf("payload: %s\r\n", payload.c_str());
     mqttMessageTimeout = 0;
     if (cmd == "$/command")
     {
       if (payload == "ON")
       {
         Serial.println("ON");
-        // digitalWrite(2, LOW);
-        // digitalWrite(15, HIGH);
+        digitalWrite(2, LOW);
+        digitalWrite(15, HIGH);
       }
       else if (payload == "OFF")
       {
-        // digitalWrite(2, HIGH);
-        // digitalWrite(15, LOW);
+        Serial.println("OFF");
+        digitalWrite(2, HIGH);
+        digitalWrite(15, LOW);
       }
       else if (payload == "FORCE_CONFIG")
       {

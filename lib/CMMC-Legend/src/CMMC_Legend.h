@@ -1,6 +1,5 @@
 #ifndef CMMC_LEGEND_H
 #define CMMC_LEGEND_H 
-#define CMMC_USE_ALIAS 
 
 #include <Arduino.h> 
 #include "version.h"
@@ -20,10 +19,25 @@ static AsyncWebServer server(80);
 static AsyncWebSocket ws("/ws");
 static AsyncEventSource events("/events");
 
-static const char* http_username = "admin";
-static const char* http_password = "admin";
-
 enum MODE {SETUP, RUN};
+
+class CMMC_Debugger {
+  public: 
+    CMMC_Debugger(Stream *s) { 
+      if (_serial) {
+        delete _serial;
+        _serial = NULL; 
+      }
+      _serial = s;
+    } 
+
+    void println(char *s) {
+      if (_serial) {
+        _serial->println(s); 
+      } 
+    }
+  Stream *_serial;
+};
 
 class CMMC_Legend: public CMMC_System {
   public:
@@ -31,6 +45,7 @@ class CMMC_Legend: public CMMC_System {
     void run(); 
     void isLongPressed();
     void setup(); 
+    void addDebugSerial(Stream *s);
   protected: 
     void init_gpio(); 
     void init_fs();
@@ -46,6 +61,7 @@ class CMMC_Legend: public CMMC_System {
     void _init_ap(); 
     void setupWebServer(AsyncWebServer *server, AsyncWebSocket *ws, AsyncEventSource *events); 
     bool stopFlag = false;
+    CMMC_Debugger *debugger;
 };
 
 #endif

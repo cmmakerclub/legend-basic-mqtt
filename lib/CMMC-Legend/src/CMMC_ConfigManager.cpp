@@ -40,7 +40,7 @@ void CMMC_ConfigManager::init(const char* filename) {
     // _load_raw_content();
   }
   else {
-    USER_DEBUG_PRINTF("creating.. %s \r\n", this->filename_c);
+    // USER_DEBUG_PRINTF("creating.. %s \r\n", this->filename_c);
     _init_json_file();
     _load_raw_content();
   }
@@ -49,7 +49,7 @@ void CMMC_ConfigManager::init(const char* filename) {
 void CMMC_ConfigManager::commit() {
   static CMMC_ConfigManager *that;
   that = this;
-  USER_DEBUG_PRINTF("Commit FS..... from [%x]\r\n", that); 
+  // USER_DEBUG_PRINTF("Commit FS..... from [%x]\r\n", that); 
   Serial.printf("> [BEFORE INNER CLOSURE] writing file %s\r\n", filename_c);
   load_config([](JsonObject * root, const char* content) {
     Serial.println("------------");
@@ -82,7 +82,7 @@ void CMMC_ConfigManager::add_field(const char* key, const char* value) {
   Serial.printf("> [ADD FILE AND SHOW FILENAME] writing file %s\r\n", filename_c);
   static CMMC_ConfigManager *that;
   that = this;
-  USER_DEBUG_PRINTF("START [add_field] %s ----> %s (with addr: %x)\r\n", key, value, that);
+  // USER_DEBUG_PRINTF("START [add_field] %s ----> %s (with addr: %x)\r\n", key, value, that);
   items[_k] = _v;
   // show content:
   // USER_DEBUG_PRINTF("Iterate through items object...\r\n");
@@ -106,13 +106,10 @@ void CMMC_ConfigManager::load_config(cmmc_json_loaded_cb_t cb) {
       cb(NULL, this->fileContent);
     }
   }
-  else {
-    Serial.println("CB = NULL");
-  }
 }
 
 File CMMC_ConfigManager::_init_json_file() {
-  USER_DEBUG_PRINTF("[_init_json_file]\r\n");
+  // USER_DEBUG_PRINTF("[_init_json_file]\r\n");
   this->configFile = SPIFFS.open(this->filename_c, "w");
   jsonBuffer.clear();
   JsonObject& json = this->jsonBuffer.createObject();

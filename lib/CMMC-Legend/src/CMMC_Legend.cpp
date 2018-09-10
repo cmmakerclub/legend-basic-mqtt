@@ -7,7 +7,6 @@ void CMMC_Legend::addModule(CMMC_Module* module) {
 
 // being called by os
 void CMMC_Legend::run() {
-  static CMMC_Legend *that = this;
   int size = _modules.size();
   for (int i = 0 ; i < size; i++) {
     _modules[i]->loop();
@@ -35,9 +34,6 @@ void CMMC_Legend::setup() {
 }
 
 void CMMC_Legend::init_gpio() {
-  Serial.begin(57600);
-  Serial.println("OS::Init GPIO..");
-  Serial.println();
   delay(10);
 }
 
@@ -128,6 +124,7 @@ void CMMC_Legend::_init_ap() {
   IPAddress NMask(255, 255, 255, 0);
   WiFi.softAPConfig(Ip, Ip, NMask);
   sprintf(&this->ap_ssid[5], "%08x", ESP.getChipId());
+  Serial.println(ap_ssid);
   WiFi.softAP(ap_ssid, &ap_ssid[5]);
   delay(20);
   IPAddress myIP = WiFi.softAPIP();
@@ -137,27 +134,23 @@ void CMMC_Legend::_init_ap() {
   delay(100);
 }
 void CMMC_Legend::setupWebServer(AsyncWebServer *server, AsyncWebSocket *ws, AsyncEventSource *events) {
-  // ws->onEvent(this->onWsEvent);
-  static CMMC_Legend *that;
-  that = this;
   server->addHandler(ws);
   server->serveStatic("/", SPIFFS, "/").setDefaultFile("index.html");
   events->onConnect([](AsyncEventSourceClient * client) {
     client->send("hello!", NULL, millis(), 1000);
   });
   server->addHandler(events);
-  server->addHandler(new SPIFFSEditor(http_username, http_password));
 
-  server->on("/heap", HTTP_GET, [](AsyncWebServerRequest * request) {
+  server->on("/heap", HTTP_GET, [&](AsyncWebServerRequest * request) {
     request->send(200, "text/plain", String(ESP.getFreeHeap()));
   });
 
-  server->on("/reboot", HTTP_GET, [](AsyncWebServerRequest * request) {
+  server->on("/reboot", HTTP_GET, [&](AsyncWebServerRequest * request) {
     request->send(200, "text/plain", "OK");
     ESP.restart();
   });
 
-  server->on("/enable", HTTP_GET, [](AsyncWebServerRequest * request) {
+  server->on("/enable", HTTP_GET, [&](AsyncWebServerRequest * request) {
     File f = SPIFFS.open("/enabled", "a+");
     if (!f) {
       Serial.println("file open failed");
@@ -169,21 +162,21 @@ void CMMC_Legend::setupWebServer(AsyncWebServer *server, AsyncWebSocket *ws, Asy
 
   static const char* fsServerIndex = "<form method='POST' action='/do-fs' enctype='multipart/form-data'><input type='file' name='update'><input type='submit' value='Update'></form>";
   static const char* serverIndex = "<form method='POST' action='/do-firmware' enctype='multipart/form-data'><input type='file' name='update'><input type='submit' value='Update'></form>";
-  server->on("/firmware", HTTP_GET, [](AsyncWebServerRequest * request) {
+  server->on("/firmware", HTTP_GET, [&](AsyncWebServerRequest * request) {
     AsyncWebServerResponse *response = request->beginResponse(200, "text/html", serverIndex);
     response->addHeader("Connection", "close");
     response->addHeader("Access-Control-Allow-Origin", "*");
     request->send(response);
   });
 
-  server->on("/fs", HTTP_GET, [](AsyncWebServerRequest * request) {
+  server->on("/fs", HTTP_GET, [&](AsyncWebServerRequest * request) {
     AsyncWebServerResponse *response = request->beginResponse(200, "text/html", fsServerIndex);
     response->addHeader("Connection", "close");
     response->addHeader("Access-Control-Allow-Origin", "*");
     request->send(response);
   });
 
-  server->on("/do-fs", HTTP_POST, [](AsyncWebServerRequest * request) {
+  server->on("/do-fs", HTTP_POST, [&](AsyncWebServerRequest * request) {
     // the request handler is triggered after the upload has finished...
     // create the response, add header, and send response
     bool updateHasError = Update.hasError();
@@ -196,7 +189,7 @@ void CMMC_Legend::setupWebServer(AsyncWebServer *server, AsyncWebSocket *ws, Asy
       // delay(1000);
       // ESP.restart();
     }
-  }, [](AsyncWebServerRequest * request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
+  }, [&](AsyncWebServerRequest * request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
     //Upload handler chunks in data
     if (!index) { // if index == 0 then this is the first frame of data
       SPIFFS.end();
@@ -256,7 +249,7 @@ void CMMC_Legend::setupWebServer(AsyncWebServer *server, AsyncWebSocket *ws, Asy
     if(final){ // if the final flag is set then this is the last frame of data
       if(Update.end(true)){ //true to set the size to the current progress
           Serial.printf("Update Success: %u B\nRebooting...\n", index+len);
-          that->stopFlag = true;
+          this->stopFlag = true;
           stopFlag = true;
         } else {
           Update.printError(Serial);
@@ -266,7 +259,7 @@ void CMMC_Legend::setupWebServer(AsyncWebServer *server, AsyncWebSocket *ws, Asy
   });
 
 
-  server->on("/do-firmware", HTTP_POST, [](AsyncWebServerRequest * request) {
+  server->on("/do-firmware", HTTP_POST, [&](AsyncWebServerRequest * request) {
     // the request handler is triggered after the upload has finished...
     // create the response, add header, and send response
     bool updateHasError = Update.hasError();
@@ -303,8 +296,7 @@ void CMMC_Legend::setupWebServer(AsyncWebServer *server, AsyncWebSocket *ws, Asy
     if (final) { // if the final flag is set then this is the last frame of data
       if (Update.end(true)) { //true to set the size to the current progress
         Serial.printf("Update Success: %u B\nRebooting...\n", index + len);
-          that->stopFlag = true;
-          stopFlag = true;
+          this->stopFlag = true;
       } else {
         Update.printError(Serial);
       }
@@ -312,7 +304,7 @@ void CMMC_Legend::setupWebServer(AsyncWebServer *server, AsyncWebSocket *ws, Asy
     }
   });
 
-  server->onNotFound([](AsyncWebServerRequest * request) {
+  server->onNotFound([&](AsyncWebServerRequest * request) {
     Serial.printf("NOT_FOUND: ");
     if (request->method() == HTTP_GET)
       Serial.printf("GET");
@@ -361,4 +353,14 @@ void CMMC_Legend::setupWebServer(AsyncWebServer *server, AsyncWebSocket *ws, Asy
 
   server->begin();
   Serial.println("Starting webserver->..");
+}
+
+void CMMC_Legend::addDebugSerial(Stream *s) {
+  debugger = new CMMC_Debugger(s);
+  // CMMC_Debugger(Stream *s) { 
+  //   if (_serial) {
+  //     delete _serial;
+  //     _serial = NULL; 
+  //   }
+  //   _serial = s;
 }

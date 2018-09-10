@@ -25,10 +25,6 @@ typedef std::function<void(const char* msg, const char* k, const char* v)> cmmc_
 typedef std::function<void(JsonObject* root, const char* content)> cmmc_json_loaded_cb_t;
 
 
-#define USER_DEBUG_PRINTF(fmt, args...) { \
-    Serial.printf(fmt, ## args); \
-  }
-
 class CMMC_ConfigManager
 {
   public:
