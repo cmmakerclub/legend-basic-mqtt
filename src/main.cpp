@@ -11,6 +11,7 @@ CMMC_Legend *os;
 
 WiFiModule* wifiModule; 
 MqttModule *mqttModule;
+ConfigButtonModule *configButtonModule;
 
 void setup()
 { 
@@ -21,9 +22,11 @@ void setup()
 
   wifiModule = new WiFiModule(); 
   mqttModule = new MqttModule(); 
+  configButtonModule = new ConfigButtonModule();
 
   os->addModule(wifiModule); 
   os->addModule(mqttModule); 
+  os->addModule(configButtonModule); 
 
   os->setup();
   Serial.printf("APP VERSION: %s\r\n", LEGEND_APP_VERSION); 

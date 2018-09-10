@@ -129,6 +129,10 @@ void MqttModule::loop()
       digitalWrite(15, LOW);
       mqtt->sync_advpub("", "CMMC/PLUG-001/$/command", "OFF", false); 
     }
+    unsigned long nextTick = millis() + 5000L;
+    while( millis() < nextTick ) {
+      mqtt->loop(); 
+    }
   }
 };
 
