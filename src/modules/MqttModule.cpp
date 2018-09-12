@@ -100,6 +100,7 @@ void MqttModule::setup()
 
   digitalWrite(2, LOW);
   digitalWrite(15, HIGH); 
+
   pinMode(S1, INPUT_PULLUP);
 
   if (mqttOk) {
